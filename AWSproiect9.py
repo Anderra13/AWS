@@ -6,6 +6,7 @@ if __name__ == "__main__":
 
     with onto:
         pharmacological_entity = onto.search_one(label="pharmacological entity")
+        #fsdfsd
         print(pharmacological_entity.label)
         drugs = list(pharmacological_entity.subclasses())
         for drug in drugs:
