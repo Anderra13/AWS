@@ -2,6 +2,7 @@ from owlready2 import *
 from xlrd import *
 import types
 
+
 def get_anm_coresp():
     # key = denumire comerciala din anm, value = lista de componente ale medicamentului conform dci din anm
     anm_corresp = {}
@@ -16,7 +17,7 @@ def get_anm_coresp():
     for i in range(143):
         sheet = anm_excel.sheet_by_index(i)
         num_rows = sheet.nrows  # Number of rows
-        if (i == 0):
+        if i == 0:
             k = 2
         else:
             k = 1
@@ -46,7 +47,7 @@ def get_anm_coresp():
                     if col1 not in anm_list:
                         anm_list.append(col1)
 
-    #anm_list.append("glydiazinamide")
+    # anm_list.append("glydiazinamide")
 
     return (anm_corresp, anm_corresp_inv, anm_list, anm_list_combinations)
 
@@ -57,13 +58,10 @@ def complete_onto(anm_corresp_inv, anm_list, anm_list_combinations):
     with onto:
         class is_prescribed(AnnotationProperty):
             pass
-
         class den_comerciala(AnnotationProperty):
             pass
 
         pharmacological_entity = onto.search_one(label="pharmacological entity")
-
-
         drugs = list(pharmacological_entity.subclasses())
         for drug in drugs:
             drug.is_prescribed = False
@@ -73,9 +71,9 @@ def complete_onto(anm_corresp_inv, anm_list, anm_list_combinations):
                     drug.den_comerciala = anm_corresp_inv[d]
                     nr += 1
 
-
         for comb_drug in anm_list_combinations:
-            NewClass = types.new_class(comb_drug, (pharmacological_entity,))
+            new_class = comb_drug.replace(" ", "_")
+            NewClass = types.new_class(new_class, (pharmacological_entity,))
             NewClass.label = comb_drug
             NewClass.den_comerciala = comb_drug
             NewClass.is_prescribed = True
@@ -83,19 +81,10 @@ def complete_onto(anm_corresp_inv, anm_list, anm_list_combinations):
     print("nr = ", nr)
     return onto
 
-def verify_new_onto():
-    onto = get_ontology("file://DINTO-modified.owl").load()
-    with onto:
-        pharmacological_entity = onto.search_one(label="pharmacological entity")
-        drugs = list(pharmacological_entity.subclasses())
-        for drug in drugs:
-            if "mg" in drug.label:
-                print(drug.label)
 
 if __name__ == "__main__":
     (anm_corresp, anm_corresp_inv, anm_list, anm_list_combinations) = get_anm_coresp()
-    #print(anm_list_combinations)
-    #print(anm_corresp_inv)
+    # print(anm_list_combinations)
+    # print(anm_corresp_inv)
     onto = complete_onto(anm_corresp_inv, anm_list, anm_list_combinations)
-    onto.save(file = "DINTO-modified.owl", format = "rdfxml")
-    verify_new_onto()
+    onto.save(file="DINTO-modified.owl", format="rdfxml")
