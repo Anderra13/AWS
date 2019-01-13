@@ -11,7 +11,7 @@ def get_anm_coresp():
     anm_list = []
     # toate componenetele medicamentelor din documentul anm (coloana dci)
     anm_list_combinations = []
-
+    anm_dict_combinations = {}
     anm_excel = open_workbook("NOM_ANM_PRES_SHEETS.xlsx")
 
     for i in range(143):
@@ -24,7 +24,7 @@ def get_anm_coresp():
         for row in range(k, num_rows):  # Iterate through rows
             col0 = sheet.cell(row, 0).value.replace("\n"," ").strip()
             col1 = sheet.cell(row, 1).value.replace("\n"," ").strip()
-            if col0 != "":
+            if col0 != "" and col1 != "" and col0 != "Denumirea comerciala" and col1 != "DCI":
                 anm_corresp[col0] = []
                 if "COMBINATII" == col1 or ("COMBINATII" not in col1 and "+" in col1):
                     continue
@@ -38,6 +38,7 @@ def get_anm_coresp():
                             anm_list.append(temp[j])
                     '''
                     anm_list_combinations.append(col0)
+                    anm_dict_combinations[col0] = col1
                 else:
                     if col1 in anm_corresp_inv.keys():
                         anm_corresp_inv[col1].append(col0)
@@ -49,13 +50,15 @@ def get_anm_coresp():
 
     # anm_list.append("glydiazinamide")
 
-    return (anm_corresp, anm_corresp_inv, anm_list, anm_list_combinations)
+    return (anm_corresp, anm_corresp_inv, anm_list, anm_list_combinations, anm_dict_combinations)
 
 
-def complete_onto(anm_corresp_inv, anm_list, anm_list_combinations):
+def complete_onto(anm_corresp_inv, anm_list, anm_list_combinations, anm_dict_combinations):
     onto = get_ontology("file://DINTO.owl").load()
     nr = 0
     with onto:
+        class DCI(AnnotationProperty):
+            pass
         class is_prescribed(AnnotationProperty):
             pass
         class den_comerciala(AnnotationProperty):
@@ -65,26 +68,41 @@ def complete_onto(anm_corresp_inv, anm_list, anm_list_combinations):
         drugs = list(pharmacological_entity.subclasses())
         for drug in drugs:
             drug.is_prescribed = False
-            for d in anm_list:
-                if d.lower() in (drug.DBSynonym + drug.Synonym):
-                    drug.is_prescribed = True
-                    drug.den_comerciala = anm_corresp_inv[d]
-                    nr += 1
+            unionSyn = drug.DBSynonym + drug.Synonym
+            for syn in unionSyn:
+                if "[inn-latin]" in syn:
+                    drug.DCI = syn[:-12].lower()
+                elif syn[-2:] == "um" and " " not in syn and "-" not in syn:
+                    drug.DCI = syn.lower()
+
+                for d in anm_list:
+                    if d != "" and d.lower() in syn:
+                        drug.DCI = d.lower()
+                        drug.is_prescribed = True
+                        for temp in anm_corresp_inv[d]:
+                            drug.den_comerciala = temp.lower()
+                        nr += 1
+            # for d in anm_list:
+            #     if d.lower() in (drug.DBSynonym + drug.Synonym):
+            #         drug.is_prescribed = True
+            #         drug.den_comerciala = anm_corresp_inv[d]
+            #         nr += 1
 
         for comb_drug in anm_list_combinations:
-            new_class = comb_drug.replace(" ", "_")
+            new_class = comb_drug.replace(" ", "_").lower()
             NewClass = types.new_class(new_class, (pharmacological_entity,))
-            NewClass.label = comb_drug
-            NewClass.den_comerciala = comb_drug
+            NewClass.label = comb_drug.lower()
+            NewClass.den_comerciala = comb_drug.lower()
             NewClass.is_prescribed = True
+            NewClass.DCI = anm_dict_combinations[comb_drug].lower()
 
     print("nr = ", nr)
     return onto
 
 
 if __name__ == "__main__":
-    (anm_corresp, anm_corresp_inv, anm_list, anm_list_combinations) = get_anm_coresp()
+    (anm_corresp, anm_corresp_inv, anm_list, anm_list_combinations, anm_dict_combinations) = get_anm_coresp()
     # print(anm_list_combinations)
     # print(anm_corresp_inv)
-    onto = complete_onto(anm_corresp_inv, anm_list, anm_list_combinations)
+    onto = complete_onto(anm_corresp_inv, anm_list, anm_list_combinations, anm_dict_combinations)
     onto.save(file="DINTO-modified.owl", format="rdfxml")
