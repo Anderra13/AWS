@@ -102,7 +102,7 @@ if (isset($_POST['home'])) {
 }
 
 
-if (isset($_POST['name']) || isset($_POST['all']) || isset($_POST['all_prescribed']) || isset($_POST['all_unprescribed'])) {
+if ((isset($_POST['name']) && ($_POST['name']) != "") || isset($_POST['all']) || isset($_POST['all_prescribed']) || isset($_POST['all_unprescribed'])) {
 	require_once( "sparqllib.php" );
 
 	$db = sparql_connect( "http://localhost:3030/DINTO-modified/sparql" );
@@ -110,7 +110,7 @@ if (isset($_POST['name']) || isset($_POST['all']) || isset($_POST['all_prescribe
 	
 	if  (isset($_POST['name'])) {
 
-		$_POST['name'] = strtolower($_POST['name']);
+		$name = strtolower($_POST['name']);
 
 		$sparql = "prefix owl: <http://www.w3.org/2002/07/owl#>
 		PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -127,15 +127,15 @@ if (isset($_POST['name']) || isset($_POST['all']) || isset($_POST['all_prescribe
   		  OPTIONAL {?class DCI: ?DCI}";
 
   		  if (isset($_POST['label'])) {
-		  	$sparql .= "FILTER(contains(?label, '" . $_POST['name'] . "'))}";
+		  	$sparql .= "FILTER(contains(?label, '" . $name . "'))}";
 		  	unset($_POST['label']);
 		  }
 		  else if (isset($_POST['den_comerciala'])) {
-		  	$sparql .= "FILTER(contains(?den_comerciala, '" . $_POST['name'] . "'))}";
+		  	$sparql .= "FILTER(contains(?den_comerciala, '" . $name . "'))}";
 		  	unset($_POST['den_comerciala']);
 		  }
 		  else if (isset($_POST['DCI'])) {
-		  	$sparql .= "FILTER(contains(?DCI,'" . $_POST['name'] . "'))}";
+		  	$sparql .= "FILTER(contains(?DCI,'" . $name . "'))}";
 		  	unset($_POST['DCI']);
 		  }
 
